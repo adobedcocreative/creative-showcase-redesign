@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Creative Showcase 2026</title>
+  <link rel="icon" href="images/adobe_favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand" id="brand" role="button" tabindex="0" title="Refresh">
+      <img class="brand__logo" src="images/Adobe_Logo.png" alt="Adobe">
+
+      <span class="brand__title">
+        DYNAMIC CREATIVE SHOWCASE
+        <small>(FOR INTERNAL USE ONLY)</small>
+      </span>
+    </div>
+    <div class="search">
+      <svg class="search__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.3-4.3M11 19a8 8 0 100-16 8 8 0 000 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="search" type="search" placeholder="Search ads, brands, categories…" autocomplete="off">
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Filters -->
+    <aside class="filters" id="filters">
+      <div class="filters__head">
+        <h2>Filter <span class="filters__count" id="count"></span></h2>
+        <button type="button" class="filters__clear" id="clear">Clear Filter</button>
+      </div>
+
+      <section class="facet">
+        <h3>Brands</h3>
+        <input type="search" class="facet__search" id="brand-search" placeholder="Search brand…" autocomplete="off">
+        <div class="facet__body facet__body--scroll" id="facet-brand"></div>
+      </section>
+
+      <section class="facet">
+        <h3>Campaign Types</h3>
+        <div class="facet__body facet__body--cols" id="facet-campaign"></div>
+      </section>
+
+      <section class="facet">
+        <h3>Categories</h3>
+        <div class="facet__body facet__body--cols" id="facet-category"></div>
+      </section>
+
+      <section class="facet">
+        <h3>Features</h3>
+        <div class="facet__body facet__body--cols" id="facet-feature"></div>
+      </section>
+      </aside>
+
+    <!-- Results -->
+    <main class="results">
+      <div class="results__bar">
+        <label class="sort">
+          <span>Sort</span>
+          <select id="sort">
+            <option value="brand">Brand (A–Z)</option>
+            <option value="newest" selected>Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>No ads match your filters.</p>
+    </main>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" hidden>
+    <div class="lightbox__backdrop" data-close></div>
+    <div class="lightbox__panel" role="dialog" aria-modal="true" aria-labelledby="lb-title">
+      <button class="lightbox__close" id="lb-close" aria-label="Close" data-close>&times;</button>
+      <div class="lightbox__body">
+        <aside class="lb-info">
+          <h2 id="lb-title"></h2>
+          <dl class="lb-info__list">
+            <div class="lb-info__row">
+              <dt>Brand</dt>
+              <dd id="lb-brand"></dd>
+            </div>
+            <div class="lb-info__row">
+              <dt>Category</dt>
+              <dd id="lb-category"></dd>
+            </div>
+            <div class="lb-info__row">
+              <dt>Campaign Type</dt>
+              <dd id="lb-campaign"></dd>
+            </div>
+            <div class="lb-info__row">
+              <dt>Features</dt>
+              <dd id="lb-features"></dd>
+            </div>
+          </dl>
+        </aside>
+        <div class="lb-view">
+          <div class="lb-carousel">
+            <button class="lb-nav lb-nav--prev" id="lb-prev" aria-label="Previous size">&#8249;</button>
+            <div class="lb-stage" id="lb-stage"></div>
+            <button class="lb-nav lb-nav--next" id="lb-next" aria-label="Next size">&#8250;</button>
+          </div>
+          <div class="lb-footer">
+            <span class="lb-size__label" id="lb-size-label"></span>
+            <div class="lb-dots" id="lb-dots"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>
+                    Developed by: 
+                    <img src="images/Adobe_Corporate_Horizontal_Red_HEX.svg" alt="Adobe" class="footer-logo">
+                    <font style="font-size:16px;color:#FA0F00;">Adobe</font>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/add-ad.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
