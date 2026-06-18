@@ -52,5 +52,5 @@ Everything lives in `js/data.js` — there is no build step.
   `category`, `campaignTypes`, and `features` values appear across all ads, with
   counts — so a new value just shows up as a filter.
 - **"Newly Added" badge** is shown on the 10 most recent ads by date, always.
-  Ads with `date: null` are never badged.
+  Ads with `date: null` are never badged. 
 - **Card thumbnail** uses the 300×250 image, falling back to 728×90 then 160×600.
