@@ -4549,5 +4549,65 @@ window.ADS = [
       "160x600",
       "728x90"
     ]
+  },
+  {
+    "id": "fpl_mockup1",
+    "title": "Florida Power & Light ",
+    "brand": "FPL",
+    "category": "Finance",
+    "campaignTypes": [
+      "Site Retargeting"
+    ],
+    "features": [
+      "Single Product"
+    ],
+    "date": "2026-07-14",
+    "dateKey": 2026071401,
+    "sizes": {
+      "300x250": "images/dynamic/300x250/FPL_Mocks_1_300x250.png"
+    },
+    "sizeList": [
+      "300x250"
+    ]
+  },
+  {
+    "id": "fpl_mockup2",
+    "title": "Florida Power & Light ",
+    "brand": "FPL",
+    "category": "Finance",
+    "campaignTypes": [
+      "Site Retargeting"
+    ],
+    "features": [
+      "Single Product"
+    ],
+    "date": "2026-07-14",
+    "dateKey": 2026071401,
+    "sizes": {
+      "300x250": "images/dynamic/300x250/FPL_Mocks_2_300x250.png"
+    },
+    "sizeList": [
+      "300x250"
+    ]
+  },
+  {
+    "id": "fpl_mockup3",
+    "title": "Florida Power & Light ",
+    "brand": "FPL",
+    "category": "Finance",
+    "campaignTypes": [
+      "Site Retargeting"
+    ],
+    "features": [
+      "Single Product"
+    ],
+    "date": "2026-07-14",
+    "dateKey": 2026071401,
+    "sizes": {
+      "300x250": "images/dynamic/300x250/FPL_Mocks_3_300x250.png"
+    },
+    "sizeList": [
+      "300x250"
+    ]
   }
 ];
