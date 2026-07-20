@@ -125,7 +125,7 @@
 
             // Campaign types
             '<div class="af-field">' +
-              '<label>Campaign Types</label>' +
+              '<label>Campaign Types <span class="af-req" aria-hidden="true">*</span></label>' +
               '<div class="af-checks">' +
                 CAMPAIGN_OPTS.map(function (v) {
                   return '<label class="af-chk"><input type="checkbox" name="campaignTypes" value="' + esc(v) + '"><span>' + esc(v) + '</span></label>';
@@ -135,7 +135,7 @@
 
             // Features
             '<div class="af-field">' +
-              '<label>Features</label>' +
+              '<label>Features <span class="af-req" aria-hidden="true">*</span></label>' +
               '<div class="af-checks">' +
                 FEATURE_OPTS.map(function (v) {
                   return '<label class="af-chk"><input type="checkbox" name="features" value="' + esc(v) + '"><span>' + esc(v) + '</span></label>';
@@ -281,6 +281,8 @@
     if (!brand)    { showErr('Brand is required.');    return; }
     if (!title)    { showErr('Ad title is required.'); return; }
     if (!category) { showErr('Category is required.'); return; }
+    if (!campaignTypes.length) { showErr('Select at least one Campaign Type.'); return; }
+    if (!features.length)      { showErr('Select at least one Feature.'); return; }
     if (!Object.keys(imgData).length) { showErr('Upload at least one ad image.'); return; }
 
     // Unique ID
