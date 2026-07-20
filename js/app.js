@@ -68,6 +68,8 @@
     lbPrev: document.getElementById('lb-prev'),
     lbNext: document.getElementById('lb-next'),
     lbShare: document.getElementById('lb-share'),
+    lbLinkStrip: document.getElementById('lb-link-strip'),
+    lbLinkUrl: document.getElementById('lb-link-url'),
   };
 
   // --- Build facet value lists with counts ---
@@ -262,6 +264,7 @@
   }
   function closeLightbox() {
     el.lightbox.hidden = true;
+    el.lbLinkStrip.hidden = true;
     document.body.style.overflow = '';
     lbAd = null;
     // Drop the deep-link hash so the address bar reflects the browsing state.
@@ -305,24 +308,16 @@
   function shareCurrentAd() {
     if (!lbAd) return;
     const url = shareUrl(lbAd);
-    // Copy to clipboard (best-effort) and open the link in a new window.
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(flashCopied, () => {});
-    }
-    window.open(url, '_blank', 'noopener');
+    el.lbLinkUrl.textContent = url;
+    el.lbLinkStrip.hidden = false;
+    if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
   }
 
-  let copiedTimer;
-  function flashCopied() {
-    const label = el.lbShare.querySelector('.lb-share__label');
-    if (!label) return;
-    el.lbShare.classList.add('is-copied');
-    label.textContent = 'Link copied';
-    clearTimeout(copiedTimer);
-    copiedTimer = setTimeout(() => {
-      el.lbShare.classList.remove('is-copied');
-      label.textContent = 'Share';
-    }, 1600);
+  let copyStripTimer;
+  function flashCopyStrip() {
+    el.lbLinkStrip.classList.add('is-copied');
+    clearTimeout(copyStripTimer);
+    copyStripTimer = setTimeout(() => el.lbLinkStrip.classList.remove('is-copied'), 1600);
   }
 
   // Restore filters + open ad from a deep-link hash on load.
@@ -354,13 +349,18 @@
     history.replaceState(null, '', location.pathname + location.search);
 
     const ad = ADS.find((a) => a.id === id);
-    if (ad) {
-      document.body.classList.add('preview-only');
-      openLightbox(ad);
-    }
+    if (ad) openLightbox(ad);
   }
 
   el.lbShare.addEventListener('click', shareCurrentAd);
+  el.lbLinkStrip.addEventListener('click', () => {
+    const url = el.lbLinkUrl.textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(flashCopyStrip, flashCopyStrip);
+    } else {
+      flashCopyStrip();
+    }
+  });
   el.lbPrev.addEventListener('click', () => step(-1));
   el.lbNext.addEventListener('click', () => step(1));
   el.lbDots.addEventListener('click', (e) => {

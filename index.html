@@ -97,10 +97,14 @@
               <dd id="lb-features"></dd>
             </div>
           </dl>
-          <button type="button" class="lb-share" id="lb-share" title="Open shareable preview in a new window">
+          <button type="button" class="lb-share" id="lb-share" title="Copy link to this preview">
             <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></g></svg>
             Share
           </button>
+          <div class="lb-link-strip" id="lb-link-strip" hidden title="Click to copy link">
+            <span class="lb-link-strip__url" id="lb-link-url"></span>
+            <svg class="lb-link-strip__icon" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </div>
         </aside>
         <div class="lb-view">
           <div class="lb-carousel">
@@ -113,6 +117,7 @@
             <div class="lb-dots" id="lb-dots"></div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>

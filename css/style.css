@@ -324,6 +324,8 @@ body { padding-top: var(--topbar-h); }
 .lightbox__body { display: flex; gap: 28px; align-items: stretch; }
 .lb-info {
   flex: 0 0 230px;
+  min-width: 0;
+  overflow: hidden;
   background: #f7f8fa;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -408,14 +410,44 @@ body { padding-top: var(--topbar-h); }
   box-shadow: 0 4px 12px rgba(20, 115, 230, .35);
 }
 
-/* Shared-link view: show only the ad preview, no browsing the rest of the app. */
-.preview-only .topbar,
-.preview-only .layout,
-.preview-only .footer,
-.preview-only .lightbox__close,
-.preview-only .lb-share { display: none; }
-.preview-only .lightbox__backdrop { pointer-events: none; }
-.lb-share.is-copied { background: #e7f6ec; border-color: #9bd6ac; color: #1a7a3c; }
+
+/* Link strip shown after clicking Share — lives inside .lb-info (230px wide) */
+.lb-link-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 10px;
+  background: var(--accent-soft);
+  border: 1px solid #b3d0f7;
+  border-radius: 7px;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+.lb-link-strip[hidden] { display: none; }
+.lb-link-strip { cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.lb-link-strip:hover { background: #d6e8fc; }
+.lb-link-strip.is-copied { background: #e7f6ec; border-color: #9bd6ac; }
+.lb-link-strip__url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent);
+  font-size: 10px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  pointer-events: none;
+}
+.lb-link-strip__icon {
+  flex: none;
+  color: var(--accent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.lb-link-strip.is-copied .lb-link-strip__url,
+.lb-link-strip.is-copied .lb-link-strip__icon { color: #1a7a3c; }
 .lb-dots { display: flex; gap: 8px; }
 .lb-dots[hidden] { display: none; }
 .lb-dot {
