@@ -21,7 +21,7 @@
 
   // Flag the most recent ads as "Newly Added": within 90 days of the latest ad
   // date in the dataset (relative, so it stays meaningful as data is refreshed).
-  (function markNew() {
+  function markNew() {
     const top10 = new Set(
       ADS.filter((a) => a.dateKey > 0)
         .sort((a, b) => b.dateKey - a.dateKey)
@@ -29,7 +29,8 @@
         .map((a) => a.id)
     );
     for (const a of ADS) a.isNew = top10.has(a.id);
-  })();
+  }
+  markNew();
 
   // Active filter state. Sizes/categories/brands are sets of selected values.
   const state = {
@@ -66,6 +67,7 @@
     lbDots: document.getElementById('lb-dots'),
     lbPrev: document.getElementById('lb-prev'),
     lbNext: document.getElementById('lb-next'),
+    lbShare: document.getElementById('lb-share'),
   };
 
   // --- Build facet value lists with counts ---
@@ -115,42 +117,60 @@
   };
 
   // --- Render results ---
+  // Card elements are cached by ad ID so filter/sort changes move existing
+  // nodes rather than destroying and recreating them.
+  const cardCache = new Map();
+
+  function createCard(ad) {
+    const size = previewSize(ad);
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.dataset.adId = ad.id;
+
+    const campaignTags = ad.campaignTypes
+      .map((c) => '<span class="tag tag--campaign">' + escapeHtml(c) + '</span>')
+      .join('');
+
+    const badge = ad.isNew ? '<span class="card__badge">New</span>' : '';
+    card.innerHTML =
+      '<div class="card__preview"><img loading="lazy" src="' + escapeAttr(ad.sizes[size]) +
+      '" alt="' + escapeAttr(ad.title) + ' (' + size + ')"></div>' +
+      badge +
+      '<div class="card__body">' +
+      '<h3 class="card__title">' + escapeHtml(ad.title) + '</h3>' +
+      '<div class="card__brand">' + escapeHtml(ad.brand) + '</div>' +
+      '<div class="card__tags"><span class="tag tag--cat">' + escapeHtml(ad.category) + '</span>' +
+      campaignTags + '</div>' +
+      '</div>';
+
+    card.addEventListener('click', () => openLightbox(ad));
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(ad); }
+    });
+    return card;
+  }
+
+  function getCard(ad) {
+    if (!cardCache.has(ad.id)) cardCache.set(ad.id, createCard(ad));
+    return cardCache.get(ad.id);
+  }
+
   function render() {
     const visible = ADS.filter(matches).sort(SORTS[state.sort] || byBrand);
     el.count.textContent = '(' + visible.length + ' of ' + ADS.length + ')';
-    el.grid.innerHTML = '';
     el.empty.hidden = visible.length !== 0;
 
-    const frag = document.createDocumentFragment();
-    for (const ad of visible) {
-      const size = previewSize(ad);
-      const card = document.createElement('article');
-      card.className = 'card';
-      card.tabIndex = 0;
-      card.setAttribute('role', 'button');
-      card.dataset.adId = ad.id;
-
-      const campaignTags = ad.campaignTypes
-        .map((c) => '<span class="tag tag--campaign">' + escapeHtml(c) + '</span>')
-        .join('');
-
-      const badge = ad.isNew ? '<span class="card__badge">Newly Added</span>' : '';
-      card.innerHTML =
-        '<div class="card__preview">' + badge + '<img loading="lazy" src="' + ad.sizes[size] +
-        '" alt="' + escapeAttr(ad.title) + ' (' + size + ')"></div>' +
-        '<div class="card__body">' +
-        '<h3 class="card__title">' + escapeHtml(ad.title) + '</h3>' +
-        '<div class="card__brand">' + escapeHtml(ad.brand) + '</div>' +
-        '<div class="card__tags"><span class="tag tag--cat">' + escapeHtml(ad.category) + '</span>' +
-        campaignTags + '</div>' +
-        '</div>';
-
-      card.addEventListener('click', () => openLightbox(ad));
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(ad); }
-      });
-      frag.appendChild(card);
+    // Detach cards that are no longer visible, keep the rest in the cache.
+    const visibleIds = new Set(visible.map((a) => a.id));
+    for (const child of [...el.grid.children]) {
+      if (!visibleIds.has(child.dataset.adId)) el.grid.removeChild(child);
     }
+
+    // Append/reorder via fragment — existing nodes are moved, not recreated.
+    const frag = document.createDocumentFragment();
+    for (const ad of visible) frag.appendChild(getCard(ad));
     el.grid.appendChild(frag);
   }
 
@@ -244,8 +264,103 @@
     el.lightbox.hidden = true;
     document.body.style.overflow = '';
     lbAd = null;
+    // Drop the deep-link hash so the address bar reflects the browsing state.
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   }
 
+  // --- Shareable deep links ---
+  // The hash encodes the open ad plus the active filters as base64 of
+  //   "<adId>&<q>|<brands>|<categories>|<campaigns>|<features>|<sort>"
+  // (comma-joined within each field). Opening such a URL restores the view
+  // and reopens the ad preview.
+  function b64encode(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin);
+  }
+  function b64decode(str) {
+    const bin = atob(str);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function shareHash(ad) {
+    const parts = [
+      state.q,
+      [...state.brands].join(','),
+      [...state.categories].join(','),
+      [...state.campaignTypes].join(','),
+      [...state.features].join(','),
+      state.sort === 'newest' ? '' : state.sort,
+    ];
+    return b64encode(ad.id + '&' + parts.join('|'));
+  }
+
+  function shareUrl(ad) {
+    return location.origin + location.pathname + location.search + '#' + shareHash(ad);
+  }
+
+  function shareCurrentAd() {
+    if (!lbAd) return;
+    const url = shareUrl(lbAd);
+    // Copy to clipboard (best-effort) and open the link in a new window.
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(flashCopied, () => {});
+    }
+    window.open(url, '_blank', 'noopener');
+  }
+
+  let copiedTimer;
+  function flashCopied() {
+    const label = el.lbShare.querySelector('.lb-share__label');
+    if (!label) return;
+    el.lbShare.classList.add('is-copied');
+    label.textContent = 'Link copied';
+    clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => {
+      el.lbShare.classList.remove('is-copied');
+      label.textContent = 'Share';
+    }, 1600);
+  }
+
+  // Restore filters + open ad from a deep-link hash on load.
+  function openFromHash() {
+    const raw = location.hash.replace(/^#/, '');
+    if (!raw) return;
+    let decoded;
+    try { decoded = b64decode(raw); } catch (e) { return; }
+    const amp = decoded.indexOf('&');
+    if (amp === -1) return;
+    const id = decoded.slice(0, amp);
+    const fields = decoded.slice(amp + 1).split('|');
+    const [q = '', brands = '', categories = '', campaigns = '', features = '', sort = ''] = fields;
+
+    const fill = (set, csv) => { set.clear(); csv.split(',').filter(Boolean).forEach((v) => set.add(v)); };
+    state.q = q;
+    fill(state.brands, brands);
+    fill(state.categories, categories);
+    fill(state.campaignTypes, campaigns);
+    fill(state.features, features);
+    state.sort = sort || 'newest';
+
+    el.search.value = q;
+    el.sort.value = state.sort;
+    paintFacets();
+    render();
+
+    // Consume the hash so a refresh doesn't re-enter preview-only mode.
+    history.replaceState(null, '', location.pathname + location.search);
+
+    const ad = ADS.find((a) => a.id === id);
+    if (ad) {
+      document.body.classList.add('preview-only');
+      openLightbox(ad);
+    }
+  }
+
+  el.lbShare.addEventListener('click', shareCurrentAd);
   el.lbPrev.addEventListener('click', () => step(-1));
   el.lbNext.addEventListener('click', () => step(1));
   el.lbDots.addEventListener('click', (e) => {
@@ -321,4 +436,5 @@
   }
   paintFacets();
   render();
+  openFromHash();
 })();
