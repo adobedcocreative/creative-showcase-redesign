@@ -88,13 +88,25 @@
         '<form id="adform" novalidate autocomplete="off">' +
           '<div class="adform-body">' +
 
-            // Brand
+            // Brand — custom searchable dropdown
             '<div class="af-field">' +
-              '<label for="af-brand">Brand <span class="af-req" aria-hidden="true">*</span></label>' +
-              '<select id="af-brand">' +
-                '<option value="">— Select or add brand —</option>' +
-                '<option value="__new__">＋ New brand…</option>' +
-              '</select>' +
+              '<label id="af-brand-lbl">Brand <span class="af-req" aria-hidden="true">*</span></label>' +
+              '<div class="af-bdd" id="af-bdd">' +
+                '<button type="button" class="af-bdd-trigger" id="af-bdd-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="af-brand-lbl">' +
+                  '<span class="af-bdd-val" id="af-bdd-val">— Select or add brand —</span>' +
+                  '<svg class="af-bdd-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+                '</button>' +
+                '<div class="af-bdd-panel" id="af-bdd-panel" hidden>' +
+                  '<div class="af-bdd-search-wrap">' +
+                    '<input type="text" class="af-bdd-search" id="af-bdd-search" placeholder="Search brands…" autocomplete="off" aria-label="Search brands">' +
+                  '</div>' +
+                  '<ul class="af-bdd-list" id="af-bdd-list" role="listbox" aria-labelledby="af-brand-lbl"></ul>' +
+                  '<div class="af-bdd-footer">' +
+                    '<button type="button" class="af-bdd-create" id="af-bdd-create">＋ Create New Brand</button>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<input type="hidden" id="af-brand">' +
             '</div>' +
             '<div class="af-field af-slide" id="af-new-brand" hidden>' +
               '<label for="af-brand-txt">New Brand Name <span class="af-req" aria-hidden="true">*</span></label>' +
@@ -110,12 +122,25 @@
             // Category (only shown when adding a new brand)
             '<div id="af-cat-section" hidden>' +
               '<div class="af-field">' +
-                '<label for="af-cat">Category <span class="af-req" aria-hidden="true">*</span></label>' +
-                '<select id="af-cat">' +
-                  '<option value="">— Select or add category —</option>' +
-                  cats.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') +
-                  '<option value="__new__">＋ New category…</option>' +
-                '</select>' +
+                '<label id="af-cat-lbl">Category <span class="af-req" aria-hidden="true">*</span></label>' +
+                '<div class="af-bdd" id="af-cdd">' +
+                  '<button type="button" class="af-bdd-trigger" id="af-cdd-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="af-cat-lbl">' +
+                    '<span class="af-bdd-val" id="af-cdd-val">— Select or add category —</span>' +
+                    '<svg class="af-bdd-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+                  '</button>' +
+                  '<div class="af-bdd-panel" id="af-cdd-panel" hidden>' +
+                    '<div class="af-bdd-search-wrap">' +
+                      '<input type="text" class="af-bdd-search" id="af-cdd-search" placeholder="Search categories…" autocomplete="off" aria-label="Search categories">' +
+                    '</div>' +
+                    '<ul class="af-bdd-list" id="af-cdd-list" role="listbox" aria-labelledby="af-cat-lbl">' +
+                      cats.map(function (c) { return '<li role="option" aria-selected="false" data-val="' + esc(c) + '">' + esc(c) + '</li>'; }).join('') +
+                    '</ul>' +
+                    '<div class="af-bdd-footer">' +
+                      '<button type="button" class="af-bdd-create" id="af-cdd-create">＋ Create New Category</button>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<input type="hidden" id="af-cat">' +
               '</div>' +
               '<div class="af-field af-slide" id="af-new-cat" hidden>' +
                 '<label for="af-cat-txt">New Category <span class="af-req" aria-hidden="true">*</span></label>' +
@@ -157,7 +182,7 @@
             '<span id="adform-err" class="adform-err" hidden></span>' +
             '<div id="adform-dup-warn" class="adform-dup-warn" hidden>' +
               '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-              '<span>Please make sure this ad is not a duplicate before saving.</span>' +
+              '<span>Please make sure this isn\'t a duplicate.</span>' +
               '<button type="button" class="adform-dup-close" id="adform-dup-cancel" aria-label="Dismiss">&times;</button>' +
             '</div>' +
             '<div class="adform-ftr-btns">' +
@@ -206,11 +231,13 @@
     var ref = ads.slice().sort(function (a, b) { return (b.dateKey || 0) - (a.dateKey || 0); })[0];
     if (!ref) return;
 
-    var catSel = document.getElementById('af-cat');
-    var catOpts = Array.prototype.slice.call(catSel.options);
-    if (ref.category && catOpts.some(function (o) { return o.value === ref.category; })) {
-      catSel.value = ref.category;
-      document.getElementById('af-new-cat').hidden = true;
+    if (ref.category && _cddCtrl) {
+      var cddList = document.getElementById('af-cdd-list');
+      var catLi = cddList && cddList.querySelector('li[data-val="' + ref.category.replace(/"/g, '\\"') + '"]');
+      if (catLi) {
+        _cddCtrl.setValue(ref.category, ref.category);
+        document.getElementById('af-new-cat').hidden = true;
+      }
     }
 
     document.querySelectorAll('input[name="campaignTypes"]').forEach(function (cb) {
@@ -225,7 +252,7 @@
     document.querySelectorAll('input[name="campaignTypes"], input[name="features"]').forEach(function (cb) {
       cb.checked = false;
     });
-    document.getElementById('af-cat').value = '';
+    if (_cddCtrl) _cddCtrl.reset();
     document.getElementById('af-new-cat').hidden = true;
   }
 
@@ -238,6 +265,8 @@
   }
 
   var pendingSave = false;
+  var _bddCtrl = null;   // brand dropdown controller (set in wireModal)
+  var _cddCtrl = null;   // category dropdown controller (set in wireModal)
 
   function showDuplicateWarning() {
     var warn = document.getElementById('adform-dup-warn');
@@ -365,6 +394,9 @@
     m.hidden = true;
     document.body.style.overflow = '';
     document.getElementById('adform').reset();
+    // Reset custom dropdowns
+    if (_bddCtrl) _bddCtrl.reset();
+    if (_cddCtrl) _cddCtrl.reset();
     document.getElementById('af-new-brand').hidden   = true;
     document.getElementById('af-cat-section').hidden = true;
     document.getElementById('af-new-cat').hidden     = true;
@@ -383,37 +415,155 @@
 
   // ── 9. Wire events ─────────────────────────────────────────────────────────
   function wireModal() {
-    var modal = document.getElementById('adform-modal');
-    var bSel  = document.getElementById('af-brand');
-    var bm    = getBrandMap();
+    var modal   = document.getElementById('adform-modal');
+    var bInput  = document.getElementById('af-brand');      // hidden input, value read by save()
+    var bm      = getBrandMap();
 
-    // Populate brands
-    var newOpt = bSel.querySelector('[value="__new__"]');
+    // ── Generic custom dropdown factory ────────────────────────────────────
+    function wireDropdown(ids, onSelect) {
+      var trigger   = document.getElementById(ids.trigger);
+      var valSpan   = document.getElementById(ids.val);
+      var panel     = document.getElementById(ids.panel);
+      var search    = document.getElementById(ids.search);
+      var list      = document.getElementById(ids.list);
+      var create    = document.getElementById(ids.create);
+      var hidden    = document.getElementById(ids.hidden);
+      var placeholder = valSpan.textContent;
+      var current   = { val: '', label: '' };
+
+      function filterList(q) {
+        q = (q || '').toLowerCase().trim();
+        var hasVisible = false;
+        list.querySelectorAll('li[data-val]').forEach(function (li) {
+          var match = !q || li.dataset.val.toLowerCase().indexOf(q) !== -1;
+          li.hidden = !match;
+          if (match) hasVisible = true;
+        });
+        var emptyLi = list.querySelector('.af-bdd-empty');
+        if (!hasVisible) {
+          if (!emptyLi) {
+            emptyLi = document.createElement('li');
+            emptyLi.className = 'af-bdd-empty';
+            emptyLi.textContent = 'No results found';
+            list.appendChild(emptyLi);
+          }
+          emptyLi.hidden = false;
+        } else if (emptyLi) {
+          emptyLi.hidden = true;
+        }
+      }
+
+      function openDd() {
+        panel.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        search.value = '';
+        filterList('');
+        search.focus();
+      }
+
+      function closeDd() {
+        panel.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+
+      function updateDisplay(val, label) {
+        current = { val: val, label: label };
+        hidden.value = val;
+        valSpan.textContent = label || placeholder;
+        list.querySelectorAll('li[data-val]').forEach(function (li) {
+          li.setAttribute('aria-selected', li.dataset.val === val ? 'true' : 'false');
+        });
+      }
+
+      function selectVal(val, label) {
+        updateDisplay(val, label);
+        closeDd();
+        onSelect(val);
+      }
+
+      trigger.addEventListener('click', function () {
+        if (panel.hidden) openDd(); else closeDd();
+      });
+
+      search.addEventListener('input', function () { filterList(search.value); });
+      search.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { closeDd(); trigger.focus(); }
+        if (e.key === 'Enter') {
+          var visible = list.querySelector('li[data-val]:not([hidden])');
+          if (visible) selectVal(visible.dataset.val, visible.dataset.val);
+        }
+      });
+
+      list.addEventListener('click', function (e) {
+        var li = e.target.closest('li[data-val]');
+        if (!li || li.classList.contains('af-bdd-empty')) return;
+        selectVal(li.dataset.val, li.dataset.val);
+      });
+
+      if (create) {
+        create.addEventListener('click', function () { selectVal('__new__', ids.createLabel); });
+      }
+
+      // Close on outside click
+      document.addEventListener('click', function (e) {
+        var dd = document.getElementById(ids.dd);
+        if (dd && !dd.contains(e.target)) closeDd();
+      });
+
+      return {
+        reset: function () {
+          current = { val: '', label: '' };
+          hidden.value = '';
+          valSpan.textContent = placeholder;
+          search.value = '';
+          closeDd();
+          list.querySelectorAll('li').forEach(function (li) { li.hidden = false; li.setAttribute('aria-selected', 'false'); });
+          var emptyLi = list.querySelector('.af-bdd-empty');
+          if (emptyLi) emptyLi.hidden = true;
+        },
+        setValue: function (val, label) { updateDisplay(val, label); }
+      };
+    }
+
+    // ── Brand dropdown ──────────────────────────────────────────────────────
+    var bddList = document.getElementById('af-bdd-list');
     var brands = Array.from(bm.keys()).sort(function (a, b) { return a.localeCompare(b); });
     brands.forEach(function (name) {
-      var opt = new Option(name, name);
-      bSel.insertBefore(opt, newOpt);
+      var li = document.createElement('li');
+      li.setAttribute('role', 'option');
+      li.setAttribute('aria-selected', 'false');
+      li.dataset.val = name;
+      li.textContent = name;
+      bddList.appendChild(li);
     });
 
-    // Brand select change
-    bSel.addEventListener('change', function () {
-      var v = bSel.value;
-      var isNew = v === '__new__';
+    _bddCtrl = wireDropdown({
+      dd: 'af-bdd', trigger: 'af-bdd-trigger', val: 'af-bdd-val',
+      search: 'af-bdd-search', panel: 'af-bdd-panel',
+      list: 'af-bdd-list', create: 'af-bdd-create', hidden: 'af-brand',
+      createLabel: '＋ New brand…'
+    }, function (val) {
+      var isNew = val === '__new__';
       document.getElementById('af-new-brand').hidden   = !isNew;
       document.getElementById('af-cat-section').hidden = !isNew;
-      if (v && !isNew) {
-        autoFill(bm.get(v) || []);
-      } else if (!v) {
+      if (val && !isNew) {
+        autoFill(bm.get(val) || []);
+      } else if (!val) {
         clearChecks();
       } else {
-        document.getElementById('af-cat').value = '';
+        if (_cddCtrl) _cddCtrl.reset();
         document.getElementById('af-new-cat').hidden = true;
       }
     });
 
-    // Category select change
-    document.getElementById('af-cat').addEventListener('change', function (e) {
-      document.getElementById('af-new-cat').hidden = e.target.value !== '__new__';
+    // ── Category dropdown ───────────────────────────────────────────────────
+    _cddCtrl = wireDropdown({
+      dd: 'af-cdd', trigger: 'af-cdd-trigger', val: 'af-cdd-val',
+      search: 'af-cdd-search', panel: 'af-cdd-panel',
+      list: 'af-cdd-list', create: 'af-cdd-create', hidden: 'af-cat',
+      createLabel: '＋ New category…'
+    }, function (val) {
+      document.getElementById('af-new-cat').hidden = val !== '__new__';
     });
 
     // File upload
