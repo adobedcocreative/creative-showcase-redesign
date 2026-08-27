@@ -4609,5 +4609,85 @@ window.ADS = [
     "sizeList": [
       "300x250"
     ]
+  },
+  {
+    "id": "jiffylube_introframe",
+    "title": "Jiffy Lube Intro Frame",
+    "brand": "Jiffy Lube",
+    "category": "Auto",
+    "campaignTypes": [
+      "Creative Optimization"
+    ],
+    "features": [
+      "Single Product"
+    ],
+    "date": "2026-08-27",
+    "dateKey": 2026082701,
+    "sizes": {
+      "300x250": "images/dynamic/300x250/JiffyLube_IntroFrame_300x250.png"
+    },
+    "sizeList": [
+      "300x250"
+    ]
+  },
+  {
+    "id": "jiffylube_endframe",
+    "title": "Jiffy Lube End Frame",
+    "brand": "Jiffy Lube",
+    "category": "Auto",
+    "campaignTypes": [
+      "Creative Optimization"
+    ],
+    "features": [
+      "Single Product"
+    ],
+    "date": "2026-08-27",
+    "dateKey": 2026082702,
+    "sizes": {
+      "300x250": "images/dynamic/300x250/JiffyLube_EndFrame_300x250.png"
+    },
+    "sizeList": [
+      "300x250"
+    ]
+  },
+  {
+    "id": "womanwithin_carousel_product1",
+    "title": "Woman Within Carousel Product1",
+    "brand": "Woman Within",
+    "category": "Style & Fashion",
+    "campaignTypes": [
+      "Site Retargeting"
+    ],
+    "features": [
+      "Multi Product"
+    ],
+    "date": "2026-08-27",
+    "dateKey": 2026082701,
+    "sizes": {
+      "300x250": "images/dynamic/300x250/WomanWithin Crarousel Product1_300x250.png"
+    },
+    "sizeList": [
+      "300x250"
+    ]
+  },
+  {
+    "id": "womanwithin_carousel_product2",
+    "title": "Woman Within Carousel Product2",
+    "brand": "Woman Within",
+    "category": "Style & Fashion",
+    "campaignTypes": [
+      "Site Retargeting"
+    ],
+    "features": [
+      "Multi Product"
+    ],
+    "date": "2026-08-27",
+    "dateKey": 2026082702,
+    "sizes": {
+      "300x250": "images/dynamic/300x250/WomanWithin Crarousel Product2_300x250.png"
+    },
+    "sizeList": [
+      "300x250"
+    ]
   }
 ];
