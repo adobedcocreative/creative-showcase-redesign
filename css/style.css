@@ -22,8 +22,71 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Push page content below the fixed top bar. */
-body { padding-top: var(--topbar-h); }
+/* Push page content below the fixed top bar, and keep the footer pinned to
+   the bottom of the viewport even while .grid is still empty/loading. */
+body {
+  padding-top: var(--topbar-h);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Page loader (scoped to the ads/results section) ---------- */
+.page-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  background: var(--bg);
+  padding: 28px 0 0;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .25s ease, visibility 0s linear 0s;
+}
+.page-loader--hidden {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .25s ease, visibility 0s linear .25s;
+}
+.page-loader__text {
+  display: block;
+  margin-bottom: 16px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+/* Skeleton cards: mimic .card's shape while the real grid is still loading. */
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 20px;
+}
+.skeleton-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.skeleton-card__img { height: 230px; }
+.skeleton-card__body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.skeleton-line { height: 12px; border-radius: 6px; }
+.skeleton-line--title { width: 70%; height: 14px; }
+.skeleton-line--brand { width: 45%; }
+.skeleton-card__tags { display: flex; gap: 6px; margin-top: 2px; }
+.skeleton-pill { width: 56px; height: 18px; border-radius: 999px; }
+
+.skeleton-card__img,
+.skeleton-line,
+.skeleton-pill {
+  background: linear-gradient(90deg, #eceef1 25%, #f5f6f8 37%, #eceef1 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
 
 /* ---------- Top bar ---------- */
 .topbar {
@@ -97,6 +160,8 @@ body { padding-top: var(--topbar-h); }
   margin: 0 auto;
   padding: 28px 16px;
   align-items: start;
+  flex: 1 0 auto;
+  width: 100%;
 }
 
 /* ---------- Filters ---------- */
@@ -166,7 +231,7 @@ body { padding-top: var(--topbar-h); }
 .opt--empty { color: var(--ink-soft); font-size: 13px; padding: 4px 0; }
 
 /* ---------- Results ---------- */
-.results { min-height: 60vh; }
+.results { position: relative; min-height: 60vh; }
 .results__bar {
   display: flex;
   justify-content: flex-end;
@@ -505,6 +570,7 @@ body { padding-top: var(--topbar-h); }
 /* Footer */
 .footer {
     height: 40px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -808,6 +874,23 @@ body { padding-top: var(--topbar-h); }
 .af-slot--ok {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+.af-slot--warn {
+  border-color: #d9a300;
+  background: #fff8e6;
+}
+.af-slot--error {
+  border-color: #d93025;
+  background: #fdecea;
+}
+.af-slot-warn {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a5d00;
+  text-align: center;
+}
+.af-slot--error .af-slot-warn {
+  color: #d93025;
 }
 .af-slot-sz {
   margin: 0;

@@ -962,7 +962,7 @@ window.ADS = [
     "id": "cbt_carousel",
     "title": "CBT Carousel",
     "brand": "CBT",
-    "category": "Other",
+    "category": "Technology",
     "campaignTypes": [
       "Site Retargeting"
     ],
@@ -1866,7 +1866,7 @@ window.ADS = [
     "id": "gbp_rt",
     "title": "GBP RT",
     "brand": "GBP",
-    "category": "Other",
+    "category": "Sports",
     "campaignTypes": [
       "Site Retargeting"
     ],
@@ -2425,7 +2425,7 @@ window.ADS = [
     "id": "jocket_carousel",
     "title": "Jocket Carousel",
     "brand": "Jocket",
-    "category": "Other",
+    "category": "Style & Fashion",
     "campaignTypes": [
       "Site Retargeting"
     ],
@@ -2449,7 +2449,7 @@ window.ADS = [
     "id": "jocket_single",
     "title": "Jocket Single",
     "brand": "Jocket",
-    "category": "Other",
+    "category": "Style & Fashion",
     "campaignTypes": [
       "Site Retargeting"
     ],
@@ -4148,7 +4148,7 @@ window.ADS = [
     "id": "templateb_versatile",
     "title": "Templateb Versatile",
     "brand": "Templateb",
-    "category": "Other",
+    "category": "Style & Fashion",
     "campaignTypes": [
       "Creative Optimization"
     ],
@@ -4244,7 +4244,7 @@ window.ADS = [
     "id": "tweed_rtg",
     "title": "Tweed RTG",
     "brand": "Tweed",
-    "category": "Other",
+    "category": "Technology",
     "campaignTypes": [
       "Creative Optimization"
     ],

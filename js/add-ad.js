@@ -1,19 +1,39 @@
 /* add-ad.js — "Add New Ad" form for Creative Showcase 2026.
- * Runs before app.js so localStorage-backed ads are in window.ADS
- * when app.js processes the catalog. */
+ * Fetches API-backed ads and merges them into window.ADS, then loads
+ * app.js dynamically so it only ever processes a complete catalog. */
 (function () {
   'use strict';
 
-  var KEY = 'creative_showcase_local_ads';
+  // Base invoke URL (through the stage), no trailing slash — the code appends
+  // '/ads', '/ads/presign', etc. See lambda/add-ad-api/README.md.
+  var API_BASE = 'https://3c1u4r7o36.execute-api.us-east-1.amazonaws.com/live';
+
   var SIZES = ['300x250', '160x600', '728x90'];
   var CAMPAIGN_OPTS = ['Creative Optimization', 'Site Retargeting', 'Geo Targeting', 'Custom Targeting'];
   var FEATURE_OPTS  = ['Single Product', 'Multi Product', 'Count Down', 'Search', 'Click to Call', 'Calendar'];
 
-  // ── 1. Merge persisted local ads into window.ADS before app.js runs ─────────
-  try {
-    var _saved = JSON.parse(localStorage.getItem(KEY) || '[]');
-    if (_saved.length) window.ADS = (window.ADS || []).concat(_saved);
-  } catch (_) {}
+  // Ids of ads that came from the API (as opposed to the hand-authored
+  // catalog in data.js) — used to decide which cards get a delete button.
+  var apiAdIds = new Set();
+
+  // ── 1. Fetch API-backed ads and merge into window.ADS before app.js runs ────
+  function loadRemoteAds() {
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 5000);
+    return fetch(API_BASE + '/ads', { signal: controller.signal })
+      .then(function (r) {
+        if (!r.ok) throw new Error('Failed to load ads (' + r.status + ')');
+        return r.json();
+      })
+      .then(function (remoteAds) {
+        if (remoteAds && remoteAds.length) {
+          remoteAds.forEach(function (a) { apiAdIds.add(a.id); });
+          window.ADS = (window.ADS || []).concat(remoteAds);
+        }
+      })
+      .catch(function (err) { console.error('Could not load ads from API:', err); })
+      .then(function () { clearTimeout(timeout); });
+  }
 
   // ── 2. Helpers ──────────────────────────────────────────────────────────────
   function esc(s) {
@@ -66,6 +86,7 @@
             '<img src="" alt="' + s + ' preview">' +
             '<button type="button" class="af-del" data-size="' + s + '" aria-label="Remove image">&times;</button>' +
           '</div>' +
+          '<span class="af-slot-warn" id="af-slot-warn-' + k + '" hidden></span>' +
         '</div>'
       );
     }).join('');
@@ -198,32 +219,80 @@
   }
 
   // ── 4. Image state & handlers ───────────────────────────────────────────────
-  var imgData = {};
+  var imgData = {};   // size -> data URL, for the in-modal thumbnail preview
+  var imgFiles = {};  // size -> File, uploaded to S3 on save
+
+  var MAX_IMAGE_MB = 5;
+  var MAX_IMAGE_BYTES = MAX_IMAGE_MB * 1024 * 1024;
 
   function loadImage(inp) {
     var size = inp.dataset.size;
     var file = inp.files[0];
     if (!file) return;
+
+    var k = size.replace('x', '-');
+    var slot = document.getElementById('af-slot-' + k);
+    var warn = document.getElementById('af-slot-warn-' + k);
+
+    if (file.size > MAX_IMAGE_BYTES) {
+      inp.value = ''; // reject: don't touch imgFiles/imgData or the existing thumb, if any
+      warn.textContent = 'File is ' + (file.size / (1024 * 1024)).toFixed(1) +
+        'MB — max allowed is ' + MAX_IMAGE_MB + 'MB.';
+      warn.hidden = false;
+      slot.classList.add('af-slot--error');
+      return;
+    }
+    slot.classList.remove('af-slot--error');
+
+    imgFiles[size] = file;
     var r = new FileReader();
     r.onload = function (ev) {
       imgData[size] = ev.target.result;
-      var k = size.replace('x', '-');
       var thumb = document.getElementById('af-thumb-' + k);
       thumb.querySelector('img').src = ev.target.result;
       thumb.hidden = false;
-      document.getElementById('af-slot-' + k).classList.add('af-slot--ok');
+      slot.classList.add('af-slot--ok');
+      checkImageDimensions(size, ev.target.result);
     };
     r.readAsDataURL(file);
   }
 
+  // Warn (non-blocking) if the uploaded image doesn't match its slot's
+  // pixel dimensions — a stretched/cropped ad still looks wrong on-site.
+  function checkImageDimensions(size, dataUrl) {
+    var m = /^(\d+)x(\d+)$/.exec(size);
+    if (!m) return;
+    var expectedW = Number(m[1]);
+    var expectedH = Number(m[2]);
+    var k = size.replace('x', '-');
+    var slot = document.getElementById('af-slot-' + k);
+    var warn = document.getElementById('af-slot-warn-' + k);
+    var img = new Image();
+    img.onload = function () {
+      if (img.naturalWidth === expectedW && img.naturalHeight === expectedH) {
+        slot.classList.remove('af-slot--warn');
+        warn.hidden = true;
+        return;
+      }
+      slot.classList.add('af-slot--warn');
+      warn.textContent = 'Image is ' + img.naturalWidth + '×' + img.naturalHeight +
+        ', slot expects ' + expectedW + '×' + expectedH + '.';
+      warn.hidden = false;
+    };
+    img.src = dataUrl;
+  }
+
   function removeImage(size) {
     delete imgData[size];
+    delete imgFiles[size];
     var k = size.replace('x', '-');
     var thumb = document.getElementById('af-thumb-' + k);
     thumb.hidden = true;
     thumb.querySelector('img').src = '';
     document.getElementById('af-file-' + k).value = '';
-    document.getElementById('af-slot-' + k).classList.remove('af-slot--ok');
+    document.getElementById('af-slot-' + k).classList.remove('af-slot--ok', 'af-slot--warn', 'af-slot--error');
+    var warn = document.getElementById('af-slot-warn-' + k);
+    if (warn) warn.hidden = true;
   }
 
   // ── 5. Auto-fill from existing brand ───────────────────────────────────────
@@ -279,15 +348,12 @@
     pendingSave = false;
   }
 
-  function save() {
+  var isSaving = false;
+
+  async function save() {
     document.getElementById('adform-err').hidden = true;
 
-    if (!pendingSave) {
-      pendingSave = true;
-      showDuplicateWarning();
-      return;
-    }
-    hideDuplicateWarning();
+    if (isSaving) return;
 
     var bSel   = document.getElementById('af-brand');
     var brand  = bSel.value === '__new__'
@@ -312,74 +378,102 @@
     if (!category) { showErr('Category is required.'); return; }
     if (!campaignTypes.length) { showErr('Select at least one Campaign Type.'); return; }
     if (!features.length)      { showErr('Select at least one Feature.'); return; }
-    if (!Object.keys(imgData).length) { showErr('Upload at least one ad image.'); return; }
+    if (!Object.keys(imgFiles).length) { showErr('Upload at least one ad image.'); return; }
 
-    // Unique ID
-    var used = new Set((window.ADS || []).map(function (a) { return a.id; }));
-    var base = slug(brand + '_' + title);
-    var uid  = base;
-    var sfx  = 2;
-    while (used.has(uid)) { uid = base + '_' + sfx; sfx++; }
+    if (!pendingSave) {
+      pendingSave = true;
+      showDuplicateWarning();
+      return;
+    }
+    hideDuplicateWarning();
 
-    var sizes = {};
-    Object.keys(imgData).forEach(function (k) { sizes[k] = imgData[k]; });
+    var adId = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : slug(brand + '_' + title) + '_' + Date.now();
 
-    var ad = {
-      id: uid,
-      title: title,
-      brand: brand,
-      category: category,
-      campaignTypes: campaignTypes,
-      features: features,
-      date: new Date().toISOString().slice(0, 10),
-      sizes: sizes,
-    };
+    var submitBtn = document.getElementById('adform-submit');
+    isSaving = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving…';
 
     try {
-      var list = JSON.parse(localStorage.getItem(KEY) || '[]');
-      list.push(ad);
-      localStorage.setItem(KEY, JSON.stringify(list));
-    } catch (err) {
-      if (err.name === 'QuotaExceededError') {
-        showErr('Browser storage is full. Use smaller images (< 500 KB each) or remove previous local ads.');
-        return;
-      }
-      throw err;
-    }
+      var files = Object.keys(imgFiles).map(function (size) {
+        return { size: size, contentType: imgFiles[size].type || 'application/octet-stream' };
+      });
 
-    window.location.reload();
+      var presignRes = await fetch(API_BASE + '/ads/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adId: adId, files: files }),
+      });
+      if (!presignRes.ok) throw new Error('Could not prepare image upload.');
+      var presignData = await presignRes.json();
+
+      var sizes = {};
+      await Promise.all(presignData.uploads.map(function (u) {
+        return fetch(u.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': imgFiles[u.size].type || 'application/octet-stream' },
+          body: imgFiles[u.size],
+        }).then(function (r) {
+          if (!r.ok) throw new Error('Failed to upload ' + u.size + ' image.');
+          sizes[u.size] = u.publicUrl;
+        });
+      }));
+
+      var ad = {
+        id: adId,
+        title: title,
+        brand: brand,
+        category: category,
+        campaignTypes: campaignTypes,
+        features: features,
+        date: new Date().toISOString().slice(0, 10),
+        sizes: sizes,
+      };
+
+      var createRes = await fetch(API_BASE + '/ads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ad),
+      });
+      if (!createRes.ok) throw new Error('Could not save ad.');
+
+      window.location.reload();
+    } catch (err) {
+      isSaving = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Ad';
+      showErr(err.message || 'Something went wrong while saving. Please try again.');
+    }
   }
 
-  // ── 7. Delete a local ad ───────────────────────────────────────────────────
-  function deleteLocalAd(id) {
-    try {
-      var list = JSON.parse(localStorage.getItem(KEY) || '[]');
-      list = list.filter(function (a) { return a.id !== id; });
-      localStorage.setItem(KEY, JSON.stringify(list));
-    } catch (_) {}
-    window.location.reload();
+  // ── 7. Delete an ad ─────────────────────────────────────────────────────────
+  function deleteAd(id) {
+    fetch(API_BASE + '/ads/' + encodeURIComponent(id), { method: 'DELETE' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('Delete failed (' + r.status + ')');
+        window.location.reload();
+      })
+      .catch(function (err) { alert('Could not delete ad: ' + err.message); });
   }
 
   function addDeleteButtons() {
-    try {
-      var localIds = new Set(
-        JSON.parse(localStorage.getItem(KEY) || '[]').map(function (a) { return a.id; })
-      );
-      localIds.forEach(function (id) {
-        var card = document.querySelector('[data-ad-id="' + id + '"]');
-        if (!card) return;
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'card__delete';
-        btn.setAttribute('aria-label', 'Delete this ad');
-        btn.textContent = '×';
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          if (confirm('Delete this locally saved ad?')) deleteLocalAd(id);
-        });
-        card.querySelector('.card__preview').appendChild(btn);
+    apiAdIds.forEach(function (id) {
+      var card = document.querySelector('[data-ad-id="' + id + '"]');
+      if (!card) return;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'card__delete';
+      btn.title = 'Delete this ad';
+      btn.setAttribute('aria-label', 'Delete this ad');
+      btn.textContent = '×';
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (confirm('Delete this ad?')) deleteAd(id);
       });
-    } catch (_) {}
+      card.querySelector('.card__preview').appendChild(btn);
+    });
   }
 
   // ── 8. Open / close modal ──────────────────────────────────────────────────
@@ -408,9 +502,12 @@
       var t = document.getElementById('af-thumb-' + k);
       if (t) { t.hidden = true; t.querySelector('img').src = ''; }
       var slot = document.getElementById('af-slot-' + k);
-      if (slot) slot.classList.remove('af-slot--ok');
+      if (slot) slot.classList.remove('af-slot--ok', 'af-slot--warn', 'af-slot--error');
+      var warn = document.getElementById('af-slot-warn-' + k);
+      if (warn) warn.hidden = true;
     });
     imgData = {};
+    imgFiles = {};
   }
 
   // ── 9. Wire events ─────────────────────────────────────────────────────────
@@ -615,12 +712,37 @@
 
     buildModal();
     wireModal();
-    addDeleteButtons();
+  }
+
+  // Loads app.js only once window.ADS holds the full catalog (static +
+  // API-backed), then attaches delete buttons once its render() has run —
+  // script.onload fires after app.js's top-level code has executed.
+  function loadAppScript(cb) {
+    var s = document.createElement('script');
+    s.src = 'js/app.js';
+    s.onload = cb;
+    s.onerror = cb; // don't leave the loader stuck up if app.js fails to load
+    document.body.appendChild(s);
+  }
+
+  function hidePageLoader() {
+    var loader = document.getElementById('page-loader');
+    if (loader) loader.classList.add('page-loader--hidden');
+  }
+
+  function boot() {
+    loadRemoteAds().then(function () {
+      init();
+      loadAppScript(function () {
+        addDeleteButtons();
+        hidePageLoader();
+      });
+    });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', boot);
   } else {
-    init();
+    boot();
   }
 })();

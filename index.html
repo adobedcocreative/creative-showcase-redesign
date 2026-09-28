@@ -56,6 +56,100 @@
 
     <!-- Results -->
     <main class="results">
+      <!-- Ads loader: shown until the ad catalog (static + API-backed) has rendered -->
+      <div class="page-loader" id="page-loader" role="status" aria-live="polite">
+        <span class="page-loader__text">Assembling awesomeness…</span>
+        <div class="skeleton-grid" aria-hidden="true">
+          <div class="skeleton-card">
+            <div class="skeleton-card__img"></div>
+            <div class="skeleton-card__body">
+              <div class="skeleton-line skeleton-line--title"></div>
+              <div class="skeleton-line skeleton-line--brand"></div>
+              <div class="skeleton-card__tags">
+                <div class="skeleton-pill"></div>
+                <div class="skeleton-pill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-card__img"></div>
+            <div class="skeleton-card__body">
+              <div class="skeleton-line skeleton-line--title"></div>
+              <div class="skeleton-line skeleton-line--brand"></div>
+              <div class="skeleton-card__tags">
+                <div class="skeleton-pill"></div>
+                <div class="skeleton-pill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-card__img"></div>
+            <div class="skeleton-card__body">
+              <div class="skeleton-line skeleton-line--title"></div>
+              <div class="skeleton-line skeleton-line--brand"></div>
+              <div class="skeleton-card__tags">
+                <div class="skeleton-pill"></div>
+                <div class="skeleton-pill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-card__img"></div>
+            <div class="skeleton-card__body">
+              <div class="skeleton-line skeleton-line--title"></div>
+              <div class="skeleton-line skeleton-line--brand"></div>
+              <div class="skeleton-card__tags">
+                <div class="skeleton-pill"></div>
+                <div class="skeleton-pill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-card__img"></div>
+            <div class="skeleton-card__body">
+              <div class="skeleton-line skeleton-line--title"></div>
+              <div class="skeleton-line skeleton-line--brand"></div>
+              <div class="skeleton-card__tags">
+                <div class="skeleton-pill"></div>
+                <div class="skeleton-pill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-card__img"></div>
+            <div class="skeleton-card__body">
+              <div class="skeleton-line skeleton-line--title"></div>
+              <div class="skeleton-line skeleton-line--brand"></div>
+              <div class="skeleton-card__tags">
+                <div class="skeleton-pill"></div>
+                <div class="skeleton-pill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-card__img"></div>
+            <div class="skeleton-card__body">
+              <div class="skeleton-line skeleton-line--title"></div>
+              <div class="skeleton-line skeleton-line--brand"></div>
+              <div class="skeleton-card__tags">
+                <div class="skeleton-pill"></div>
+                <div class="skeleton-pill"></div>
+              </div>
+            </div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-card__img"></div>
+            <div class="skeleton-card__body">
+              <div class="skeleton-line skeleton-line--title"></div>
+              <div class="skeleton-line skeleton-line--brand"></div>
+              <div class="skeleton-card__tags">
+                <div class="skeleton-pill"></div>
+                <div class="skeleton-pill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="results__bar">
         <label class="sort">
           <span>Sort</span>
@@ -137,6 +231,7 @@
 
   <script src="js/data.js"></script>
   <script src="js/add-ad.js"></script>
-  <script src="js/app.js"></script>
+  <!-- js/app.js is loaded dynamically by add-ad.js once API-backed ads
+       have been fetched and merged into window.ADS. -->
 </body>
 </html>
