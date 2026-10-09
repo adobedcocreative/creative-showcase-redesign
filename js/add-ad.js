@@ -10,7 +10,7 @@
 
   var SIZES = ['300x250', '160x600', '728x90'];
   var CAMPAIGN_OPTS = ['Creative Optimization', 'Site Retargeting', 'Geo Targeting', 'Custom Targeting'];
-  var FEATURE_OPTS  = ['Single Product', 'Multi Product', 'Count Down', 'Search', 'Click to Call', 'Calendar'];
+  var FEATURE_OPTS  = ['Single Product', 'Multi Product', 'Count Down', 'Search', 'Click to Call', 'Calendar', 'Mockup'];
 
   // Ids of ads that came from the API (as opposed to the hand-authored
   // catalog in data.js) — used to decide which cards get a delete button.
@@ -692,6 +692,7 @@
 
   // ── 10. Inject button + init ───────────────────────────────────────────────
   function init() {
+
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.id   = 'add-ad-btn';

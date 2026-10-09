@@ -34,6 +34,7 @@
 
   // Active filter state. Sizes/categories/brands are sets of selected values.
   const state = {
+    section: 'ads',
     q: '',
     sort: 'newest',
     categories: new Set(),
@@ -71,6 +72,39 @@
     lbLinkStrip: document.getElementById('lb-link-strip'),
     lbLinkUrl: document.getElementById('lb-link-url'),
   };
+ 
+  function isMockup(ad) {
+    return ad.features.some((feature) =>
+      String(feature).trim().toLowerCase() === 'mockup'
+    );
+  }
+
+  function inActiveSection(ad) {
+    return state.section === 'mockups' ? isMockup(ad) : !isMockup(ad);
+  }
+
+  // Ads/Mockups section switcher: uncomment this and the render update when released.
+  /*
+  const sectionControls = document.createElement('nav');
+  sectionControls.className = 'showcase-sections';
+  sectionControls.setAttribute('aria-label', 'Creative sections');
+
+  for (const [value, label] of [['ads', 'Ads'], ['mockups', 'Mockups']]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.dataset.section = value;
+    button.setAttribute('aria-pressed', String(state.section === value));
+    button.addEventListener('click', () => {
+      state.section = value;
+      render();
+    });
+    sectionControls.appendChild(button);
+  }
+
+  document.querySelector('.results__bar').prepend(sectionControls);
+  */
+
 
   // --- Build facet value lists with counts ---
   function countBy(getValues) {
@@ -89,10 +123,11 @@
   // Show campaign-type and feature options in a stable, meaningful order
   // (matching the generator's rule order) rather than alphabetical.
   const CAMPAIGN_ORDER = ['Creative Optimization', 'Site Retargeting', 'Geo Targeting', 'Custom Targeting'];
-  const FEATURE_ORDER = ['Single Product', 'Multi Product', 'Count Down', 'Search', 'Click to Call', 'Calendar'];
+  const FEATURE_ORDER = ['Single Product', 'Multi Product', 'Count Down', 'Search', 'Click to Call', 'Calendar','Mockup'];
 
   // --- Matching ---
   function matches(ad) {
+    if (!inActiveSection(ad)) return false;
     if (state.categories.size && !state.categories.has(ad.category)) return false;
     if (state.campaignTypes.size && !ad.campaignTypes.some((c) => state.campaignTypes.has(c))) return false;
     if (state.features.size && !ad.features.some((f) => state.features.has(f))) return false;
@@ -161,8 +196,23 @@
 
   function render() {
     const visible = ADS.filter(matches).sort(SORTS[state.sort] || byBrand);
-    el.count.textContent = '(' + visible.length + ' of ' + ADS.length + ')';
+    const sectionTotal = ADS.filter(inActiveSection).length;
+
+    el.count.textContent = '(' + visible.length + ' of ' + sectionTotal + ')';
+    el.empty.textContent = state.section === 'mockups'
+      ? 'No mockups match your filters.'
+      : 'No ads match your filters.';
     el.empty.hidden = visible.length !== 0;
+
+    // Ads/Mockups section switcher: restore alongside the creation block above.
+    /*
+    sectionControls.querySelectorAll('button').forEach((button) => {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset.section === state.section)
+      );
+    });
+    */
 
     // Detach cards that are no longer visible, keep the rest in the cache.
     const visibleIds = new Set(visible.map((a) => a.id));
@@ -305,12 +355,51 @@
     return location.origin + location.pathname + location.search + '#' + shareHash(ad);
   }
 
+  async function copyLink(url) {
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        return true;
+      } catch {
+        // Try the legacy fallback below.
+      }
+    }
+
+    // Best-effort fallback for HTTP; deprecated but still widely supported.
+    const previousFocus = document.activeElement;
+    const textarea = document.createElement('textarea');
+    textarea.value = url;
+    textarea.readOnly = true;
+    textarea.style.cssText = 'position:fixed;top:0;left:-9999px;';
+    document.body.appendChild(textarea);
+
+    try {
+      textarea.focus();
+      textarea.select();
+      textarea.setSelectionRange(0, url.length);
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      textarea.remove();
+      previousFocus?.focus();
+    }
+  }
+
+  async function copyAndNotify(url) {
+    if (await copyLink(url)) {
+      flashCopyStrip();
+    } else {
+      window.prompt('Copy this link manually (⌘C):', url);
+    }
+  }
+
   function shareCurrentAd() {
     if (!lbAd) return;
     const url = shareUrl(lbAd);
     el.lbLinkUrl.textContent = url;
     el.lbLinkStrip.hidden = false;
-    if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+    void copyAndNotify(url);
   }
 
   let copyStripTimer;
@@ -339,6 +428,8 @@
     fill(state.campaignTypes, campaigns);
     fill(state.features, features);
     state.sort = sort || 'newest';
+    const linkedAd = ADS.find((ad) => ad.id === id);
+    state.section = linkedAd && isMockup(linkedAd) ? 'mockups' : 'ads';
 
     el.search.value = q;
     el.sort.value = state.sort;
@@ -354,12 +445,7 @@
 
   el.lbShare.addEventListener('click', shareCurrentAd);
   el.lbLinkStrip.addEventListener('click', () => {
-    const url = el.lbLinkUrl.textContent;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(flashCopyStrip, flashCopyStrip);
-    } else {
-      flashCopyStrip();
-    }
+    void copyAndNotify(el.lbLinkUrl.textContent);
   });
   el.lbPrev.addEventListener('click', () => step(-1));
   el.lbNext.addEventListener('click', () => step(1));

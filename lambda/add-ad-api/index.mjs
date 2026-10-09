@@ -15,10 +15,11 @@ const BUCKET_NAME = process.env.BUCKET_NAME;
 // Accept either name — the AWS team's convention is SITE_ORIGIN; the README uses
 // ALLOWED_ORIGIN. Reading both avoids a mismatch breaking CORS.
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || process.env.SITE_ORIGIN || '*';
+const ADMIN_TOKENS = (process.env.ADMIN_TOKENS || '').split(',').map((t) => t.trim()).filter(Boolean);
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
 };
 
@@ -100,6 +101,24 @@ async function presign(body) {
 // Works across API Gateway HTTP API (v2) / Lambda Function URLs, which put the
 // method at event.requestContext.http.method, and REST API (v1) proxy
 // integration, which uses event.httpMethod.
+function requireAuth(event) {
+  const authHeader = event.headers?.authorization || event.headers?.Authorization;
+  if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
+    return json(401, { error: 'Unauthorized' });
+  }
+
+  if (!ADMIN_TOKENS.length) {
+    return json(500, { error: 'Admin auth is not configured on this environment' });
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!ADMIN_TOKENS.includes(token)) {
+    return json(403, { error: 'Forbidden' });
+  }
+
+  return null;
+}
+
 function getMethod(event) {
   return event.requestContext?.http?.method || event.httpMethod || '';
 }
@@ -128,9 +147,22 @@ export const handler = async (event) => {
   try {
     if (method === 'OPTIONS') return { statusCode: 204, headers: CORS_HEADERS, body: '' };
     if (method === 'GET' && route === '/ads') return await listAds();
-    if (method === 'POST' && route === '/ads/presign') return await presign(parseBody(event));
-    if (method === 'POST' && route === '/ads') return await createAd(parseBody(event));
+
+    if (method === 'POST' && route === '/ads/presign') {
+      const authError = requireAuth(event);
+      if (authError) return authError;
+      return await presign(parseBody(event));
+    }
+
+    if (method === 'POST' && route === '/ads') {
+      const authError = requireAuth(event);
+      if (authError) return authError;
+      return await createAd(parseBody(event));
+    }
+
     if (method === 'DELETE' && route.startsWith('/ads/')) {
+      const authError = requireAuth(event);
+      if (authError) return authError;
       // Prefer the REST API path parameter when present; fall back to the route.
       const id = event.pathParameters?.id || route.slice('/ads/'.length);
       return await deleteAd(decodeURIComponent(id));
