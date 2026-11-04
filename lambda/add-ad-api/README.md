@@ -2,7 +2,7 @@
 
 Backs the "Add Creative" feature in the Creative Showcase static site
 (replaces the old localStorage-only persistence). One Lambda function
-handles four routes.
+handles five routes, including updates to existing API-backed creatives.
 
 ## Runtime
 
@@ -17,10 +17,11 @@ handles four routes.
 | GET    | /ads           | List all API-backed ads                      |
 | POST   | /ads/presign   | Get pre-signed S3 PUT URLs for ad images     |
 | POST   | /ads           | Create an ad record                          |
+| PUT    | /ads/{id}      | Update an existing API-backed ad             |
 | DELETE | /ads/{id}      | Delete an ad record (+ best-effort S3 cleanup)|
 
-Enable CORS on the API for the site's origin, methods `GET, POST, DELETE,
-OPTIONS`, header `Content-Type`. The Lambda also returns CORS headers itself
+Enable CORS on the API for the site's origin, methods `GET, POST, PUT, DELETE,
+OPTIONS`, headers `Content-Type`. The Lambda also returns CORS headers itself
 as a fallback in case a REST API (v1) is used instead of HTTP API.
 
 ## Environment variables
@@ -33,8 +34,33 @@ as a fallback in case a REST API (v1) is used instead of HTTP API.
 
 ## IAM permissions (execution role)
 
-- DynamoDB, on `TABLE_NAME`: `GetItem`, `PutItem`, `DeleteItem`, `Scan`
+- DynamoDB, on `TABLE_NAME`: `GetItem`, `PutItem`, `UpdateItem`, `DeleteItem`, `Scan`
 - S3, on `BUCKET_NAME`: `PutObject`, `DeleteObject`, `ListBucket`
+
+## Deploying editing support
+
+1. Deploy the updated Lambda handler and its existing dependencies.
+2. Add `PUT /ads/{id}` to API Gateway, using the same Lambda integration as the existing routes, and deploy the stage if auto-deploy is disabled.
+3. Add `PUT` to API Gateway CORS and allow the `Content-Type` header.
+4. Add `dynamodb:UpdateItem` for the existing table to the Lambda execution role.
+5. Deploy the updated static site. Configure API Gateway write routes with no authorizer or API key requirement if either was previously enabled.
+
+No new table, bucket, or S3 permissions are needed. No admin token or
+authorization header is required. Anyone who can reach the API can create,
+edit, upload images, and delete creatives.
+
+Creative fields are not validated: blank details and empty image maps are
+accepted. Omitted fields default to empty strings, arrays, or an image map.
+Updates use the route ID, preserve existing `createdAt` and `date`, and set
+`updatedAt`. Updating an unknown ID creates a record. DynamoDB still requires
+a nonempty record ID, supplied automatically by the form for new creatives.
+Existing image URLs are retained unless replaced or
+removed in the form. Replacement uploads use `ads/{id}/revisions/{timestamp}/`
+so a failed update cannot overwrite the currently published images. Old or
+unreferenced images remain until the creative is deleted.
+
+Run the isolated backend tests with `npm test`; they use mocked AWS clients
+and do not need credentials or change live AWS resources.
 
 ## DynamoDB table
 

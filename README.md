@@ -70,6 +70,23 @@ For ads you want checked into the repo (as opposed to added via the UI):
    omit them.
 3. **Refresh** the page.
 
+## Editing Added Creatives
+
+Only creatives saved through **Add Creative** have an **Edit** button on their
+card, in both the Ads and Mockups sections. Hand-authored entries in `js/data.js`
+are not editable through the UI.
+
+Click **Edit**, change the details or images, and click
+**Save Changes**. Existing images are kept unless removed or replaced, and the
+creative's ID and original creation date stay unchanged. Closing the form
+clears the editing state. No admin token is required. Fields and images are
+optional; saving does not require duplicate confirmation or check upload size
+or image dimensions.
+
+Editing requires the updated AWS API to be deployed. Follow
+[the API deployment steps](lambda/add-ad-api/README.md#deploying-editing-support)
+for the new PUT route, CORS configuration, and DynamoDB permission.
+
 ## Notes
 - **Filter options are data-driven:** the sidebar lists whatever `brand`,
   `category`, `campaignTypes`, and `features` values appear across all ads, with
@@ -77,9 +94,6 @@ For ads you want checked into the repo (as opposed to added via the UI):
 - **"Newly Added" badge** is shown on the 10 most recent ads by date, always.
   Ads with `date: null` are never badged. 
 - **Card thumbnail** uses the 300×250 image, falling back to 728×90 then 160×600.
-- **Image size warning:** the "Add Creative" form flags (non-blocking) when an
-  uploaded image's pixel dimensions don't match its slot (e.g. a 300×250 slot
-  fed a 250×300 image).
 - **Deploying `js/data.js` / the static site to S3 does not touch DynamoDB.**
   They're separate stores merged at runtime — redeploying the static site
   changes only the hand-authored half of the catalog.

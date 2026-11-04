@@ -315,6 +315,24 @@ body {
 .card:hover .card__delete,
 .card:focus-within .card__delete { opacity: 1; }
 .card__delete:hover { background: #b8271e; }
+.card__edit {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 44px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.card__edit:hover { background: var(--accent-soft); }
+.card__edit:focus-visible { outline: 2px solid var(--accent); }
 .card__badge {
   align-self: flex-start;
   margin: -7px 16px -2px;
@@ -714,6 +732,7 @@ body {
 }
 
 .af-field input[type="text"],
+.af-field input[type="password"],
 .af-field input[type="date"],
 .af-field select {
   height: 40px;

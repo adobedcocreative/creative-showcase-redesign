@@ -81,12 +81,11 @@
             '</svg>' +
             '<span>Upload</span>' +
           '</label>' +
-          '<input type="file" id="af-file-' + k + '" class="af-file" accept="image/*" data-size="' + s + '">' +
+          '<input type="file" id="af-file-' + k + '" class="af-file" data-size="' + s + '">' +
           '<div class="af-thumb" id="af-thumb-' + k + '" hidden>' +
             '<img src="" alt="' + s + ' preview">' +
             '<button type="button" class="af-del" data-size="' + s + '" aria-label="Remove image">&times;</button>' +
           '</div>' +
-          '<span class="af-slot-warn" id="af-slot-warn-' + k + '" hidden></span>' +
         '</div>'
       );
     }).join('');
@@ -111,7 +110,7 @@
 
             // Brand — custom searchable dropdown
             '<div class="af-field">' +
-              '<label id="af-brand-lbl">Brand <span class="af-req" aria-hidden="true">*</span></label>' +
+              '<label id="af-brand-lbl">Brand</label>' +
               '<div class="af-bdd" id="af-bdd">' +
                 '<button type="button" class="af-bdd-trigger" id="af-bdd-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="af-brand-lbl">' +
                   '<span class="af-bdd-val" id="af-bdd-val">— Select or add brand —</span>' +
@@ -130,20 +129,20 @@
               '<input type="hidden" id="af-brand">' +
             '</div>' +
             '<div class="af-field af-slide" id="af-new-brand" hidden>' +
-              '<label for="af-brand-txt">New Brand Name <span class="af-req" aria-hidden="true">*</span></label>' +
+              '<label for="af-brand-txt">New Brand Name</label>' +
               '<input id="af-brand-txt" type="text" placeholder="e.g. Acme Corp">' +
             '</div>' +
 
             // Title
             '<div class="af-field">' +
-              '<label for="af-title">Ad Title <span class="af-req" aria-hidden="true">*</span></label>' +
+              '<label for="af-title">Ad Title</label>' +
               '<input id="af-title" type="text" placeholder="e.g. Summer Promo 2026">' +
             '</div>' +
 
             // Category (only shown when adding a new brand)
             '<div id="af-cat-section" hidden>' +
               '<div class="af-field">' +
-                '<label id="af-cat-lbl">Category <span class="af-req" aria-hidden="true">*</span></label>' +
+                '<label id="af-cat-lbl">Category</label>' +
                 '<div class="af-bdd" id="af-cdd">' +
                   '<button type="button" class="af-bdd-trigger" id="af-cdd-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="af-cat-lbl">' +
                     '<span class="af-bdd-val" id="af-cdd-val">— Select or add category —</span>' +
@@ -164,14 +163,14 @@
                 '<input type="hidden" id="af-cat">' +
               '</div>' +
               '<div class="af-field af-slide" id="af-new-cat" hidden>' +
-                '<label for="af-cat-txt">New Category <span class="af-req" aria-hidden="true">*</span></label>' +
+                '<label for="af-cat-txt">New Category</label>' +
                 '<input id="af-cat-txt" type="text" placeholder="e.g. Finance">' +
               '</div>' +
             '</div>' +
 
             // Campaign types
             '<div class="af-field">' +
-              '<label>Campaign Types <span class="af-req" aria-hidden="true">*</span></label>' +
+              '<label>Campaign Types</label>' +
               '<div class="af-checks">' +
                 CAMPAIGN_OPTS.map(function (v) {
                   return '<label class="af-chk"><input type="checkbox" name="campaignTypes" value="' + esc(v) + '"><span>' + esc(v) + '</span></label>';
@@ -181,7 +180,7 @@
 
             // Features
             '<div class="af-field">' +
-              '<label>Features <span class="af-req" aria-hidden="true">*</span></label>' +
+              '<label>Features</label>' +
               '<div class="af-checks">' +
                 FEATURE_OPTS.map(function (v) {
                   return '<label class="af-chk"><input type="checkbox" name="features" value="' + esc(v) + '"><span>' + esc(v) + '</span></label>';
@@ -191,9 +190,7 @@
 
             // Image slots
             '<div class="af-field">' +
-              '<label>Ad Images <span class="af-req" aria-hidden="true">*</span>' +
-                '<em class="af-hint"> — upload at least one size</em>' +
-              '</label>' +
+              '<label>Ad Images</label>' +
               '<div class="af-slots">' + slotsHtml + '</div>' +
             '</div>' +
 
@@ -201,11 +198,6 @@
 
           '<div class="adform-ftr">' +
             '<span id="adform-err" class="adform-err" hidden></span>' +
-            '<div id="adform-dup-warn" class="adform-dup-warn" hidden>' +
-              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-              '<span>Please make sure this isn\'t a duplicate.</span>' +
-              '<button type="button" class="adform-dup-close" id="adform-dup-cancel" aria-label="Dismiss">&times;</button>' +
-            '</div>' +
             '<div class="adform-ftr-btns">' +
               '<button type="button" class="af-btn af-btn--ghost" data-ac>Cancel</button>' +
               '<button type="submit" class="af-btn af-btn--primary" id="adform-submit">Save Ad</button>' +
@@ -221,9 +213,8 @@
   // ── 4. Image state & handlers ───────────────────────────────────────────────
   var imgData = {};   // size -> data URL, for the in-modal thumbnail preview
   var imgFiles = {};  // size -> File, uploaded to S3 on save
-
-  var MAX_IMAGE_MB = 5;
-  var MAX_IMAGE_BYTES = MAX_IMAGE_MB * 1024 * 1024;
+  var editingAd = null;
+  var retainedSizes = {};
 
   function loadImage(inp) {
     var size = inp.dataset.size;
@@ -232,17 +223,6 @@
 
     var k = size.replace('x', '-');
     var slot = document.getElementById('af-slot-' + k);
-    var warn = document.getElementById('af-slot-warn-' + k);
-
-    if (file.size > MAX_IMAGE_BYTES) {
-      inp.value = ''; // reject: don't touch imgFiles/imgData or the existing thumb, if any
-      warn.textContent = 'File is ' + (file.size / (1024 * 1024)).toFixed(1) +
-        'MB — max allowed is ' + MAX_IMAGE_MB + 'MB.';
-      warn.hidden = false;
-      slot.classList.add('af-slot--error');
-      return;
-    }
-    slot.classList.remove('af-slot--error');
 
     imgFiles[size] = file;
     var r = new FileReader();
@@ -252,47 +232,20 @@
       thumb.querySelector('img').src = ev.target.result;
       thumb.hidden = false;
       slot.classList.add('af-slot--ok');
-      checkImageDimensions(size, ev.target.result);
     };
     r.readAsDataURL(file);
-  }
-
-  // Warn (non-blocking) if the uploaded image doesn't match its slot's
-  // pixel dimensions — a stretched/cropped ad still looks wrong on-site.
-  function checkImageDimensions(size, dataUrl) {
-    var m = /^(\d+)x(\d+)$/.exec(size);
-    if (!m) return;
-    var expectedW = Number(m[1]);
-    var expectedH = Number(m[2]);
-    var k = size.replace('x', '-');
-    var slot = document.getElementById('af-slot-' + k);
-    var warn = document.getElementById('af-slot-warn-' + k);
-    var img = new Image();
-    img.onload = function () {
-      if (img.naturalWidth === expectedW && img.naturalHeight === expectedH) {
-        slot.classList.remove('af-slot--warn');
-        warn.hidden = true;
-        return;
-      }
-      slot.classList.add('af-slot--warn');
-      warn.textContent = 'Image is ' + img.naturalWidth + '×' + img.naturalHeight +
-        ', slot expects ' + expectedW + '×' + expectedH + '.';
-      warn.hidden = false;
-    };
-    img.src = dataUrl;
   }
 
   function removeImage(size) {
     delete imgData[size];
     delete imgFiles[size];
+    delete retainedSizes[size];
     var k = size.replace('x', '-');
     var thumb = document.getElementById('af-thumb-' + k);
     thumb.hidden = true;
     thumb.querySelector('img').src = '';
     document.getElementById('af-file-' + k).value = '';
-    document.getElementById('af-slot-' + k).classList.remove('af-slot--ok', 'af-slot--warn', 'af-slot--error');
-    var warn = document.getElementById('af-slot-warn-' + k);
-    if (warn) warn.hidden = true;
+    document.getElementById('af-slot-' + k).classList.remove('af-slot--ok');
   }
 
   // ── 5. Auto-fill from existing brand ───────────────────────────────────────
@@ -333,20 +286,8 @@
     el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  var pendingSave = false;
   var _bddCtrl = null;   // brand dropdown controller (set in wireModal)
   var _cddCtrl = null;   // category dropdown controller (set in wireModal)
-
-  function showDuplicateWarning() {
-    var warn = document.getElementById('adform-dup-warn');
-    warn.hidden = false;
-    warn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
-
-  function hideDuplicateWarning() {
-    document.getElementById('adform-dup-warn').hidden = true;
-    pendingSave = false;
-  }
 
   var isSaving = false;
 
@@ -373,21 +314,9 @@
       .call(document.querySelectorAll('input[name="features"]:checked'))
       .map(function (c) { return c.value; });
 
-    if (!brand)    { showErr('Brand is required.');    return; }
-    if (!title)    { showErr('Ad title is required.'); return; }
-    if (!category) { showErr('Category is required.'); return; }
-    if (!campaignTypes.length) { showErr('Select at least one Campaign Type.'); return; }
-    if (!features.length)      { showErr('Select at least one Feature.'); return; }
-    if (!Object.keys(imgFiles).length) { showErr('Upload at least one ad image.'); return; }
+    var headers = { 'Content-Type': 'application/json' };
 
-    if (!pendingSave) {
-      pendingSave = true;
-      showDuplicateWarning();
-      return;
-    }
-    hideDuplicateWarning();
-
-    var adId = (window.crypto && crypto.randomUUID)
+    var adId = editingAd ? editingAd.id : (window.crypto && crypto.randomUUID)
       ? crypto.randomUUID()
       : slug(brand + '_' + title) + '_' + Date.now();
 
@@ -401,25 +330,27 @@
         return { size: size, contentType: imgFiles[size].type || 'application/octet-stream' };
       });
 
-      var presignRes = await fetch(API_BASE + '/ads/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adId: adId, files: files }),
-      });
-      if (!presignRes.ok) throw new Error('Could not prepare image upload.');
-      var presignData = await presignRes.json();
-
-      var sizes = {};
-      await Promise.all(presignData.uploads.map(function (u) {
-        return fetch(u.uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': imgFiles[u.size].type || 'application/octet-stream' },
-          body: imgFiles[u.size],
-        }).then(function (r) {
-          if (!r.ok) throw new Error('Failed to upload ' + u.size + ' image.');
-          sizes[u.size] = u.publicUrl;
+      var sizes = Object.assign({}, retainedSizes);
+      if (files.length) {
+        var presignRes = await fetch(API_BASE + '/ads/presign', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ adId: editingAd ? adId + '/revisions/' + Date.now() : adId, files: files }),
         });
-      }));
+        if (!presignRes.ok) throw new Error('Could not prepare image upload.');
+        var presignData = await presignRes.json();
+
+        await Promise.all(presignData.uploads.map(function (u) {
+          return fetch(u.uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': imgFiles[u.size].type || 'application/octet-stream' },
+            body: imgFiles[u.size],
+          }).then(function (r) {
+            if (!r.ok) throw new Error('Failed to upload ' + u.size + ' image.');
+            sizes[u.size] = u.publicUrl;
+          });
+        }));
+      }
 
       var ad = {
         id: adId,
@@ -428,22 +359,25 @@
         category: category,
         campaignTypes: campaignTypes,
         features: features,
-        date: new Date().toISOString().slice(0, 10),
+        date: editingAd ? editingAd.date : new Date().toISOString().slice(0, 10),
         sizes: sizes,
       };
 
-      var createRes = await fetch(API_BASE + '/ads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      var createRes = await fetch(API_BASE + '/ads' + (editingAd ? '/' + encodeURIComponent(adId) : ''), {
+        method: editingAd ? 'PUT' : 'POST',
+        headers: headers,
         body: JSON.stringify(ad),
       });
-      if (!createRes.ok) throw new Error('Could not save ad.');
+      if (!createRes.ok) {
+        var failure = await createRes.json().catch(function () { return {}; });
+        throw new Error(failure.error || 'Could not save ad (' + createRes.status + ').');
+      }
 
       window.location.reload();
     } catch (err) {
       isSaving = false;
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Save Ad';
+      submitBtn.textContent = editingAd ? 'Save Changes' : 'Save Ad';
       showErr(err.message || 'Something went wrong while saving. Please try again.');
     }
   }
@@ -461,7 +395,19 @@
   function addDeleteButtons() {
     apiAdIds.forEach(function (id) {
       var card = document.querySelector('[data-ad-id="' + id + '"]');
-      if (!card) return;
+      if (!card || card.querySelector('.card__edit')) return;
+      var editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'card__edit';
+      editBtn.title = 'Edit this creative';
+      editBtn.setAttribute('aria-label', 'Edit this creative');
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openEditModal(id);
+      });
+      editBtn.addEventListener('keydown', function (e) { e.stopPropagation(); });
+      card.querySelector('.card__preview').appendChild(editBtn);
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'card__delete';
@@ -482,7 +428,36 @@
     document.body.style.overflow = 'hidden';
   }
 
+  function openEditModal(id) {
+    if (!apiAdIds.has(id) || isSaving) return;
+    var ad = (window.ADS || []).find(function (item) { return item.id === id; });
+    if (!ad) return;
+    closeModal();
+    editingAd = ad;
+    retainedSizes = Object.assign({}, ad.sizes);
+    document.getElementById('adform-heading').textContent = 'Edit Creative';
+    document.getElementById('adform-submit').textContent = 'Save Changes';
+    document.getElementById('af-title').value = ad.title;
+    _bddCtrl.setValue(ad.brand, ad.brand);
+    _cddCtrl.setValue(ad.category, ad.category);
+    document.getElementById('af-cat-section').hidden = false;
+    document.querySelectorAll('input[name="campaignTypes"], input[name="features"]').forEach(function (checkbox) {
+      checkbox.checked = (ad[checkbox.name] || []).indexOf(checkbox.value) !== -1;
+    });
+    SIZES.forEach(function (size) {
+      if (!retainedSizes[size]) return;
+      var key = size.replace('x', '-');
+      var thumb = document.getElementById('af-thumb-' + key);
+      thumb.querySelector('img').src = retainedSizes[size];
+      thumb.hidden = false;
+      document.getElementById('af-slot-' + key).classList.add('af-slot--ok');
+    });
+    openModal();
+    document.getElementById('af-title').focus();
+  }
+
   function closeModal() {
+    if (isSaving) return;
     var m = document.getElementById('adform-modal');
     if (!m) return;
     m.hidden = true;
@@ -495,16 +470,16 @@
     document.getElementById('af-cat-section').hidden = true;
     document.getElementById('af-new-cat').hidden     = true;
     document.getElementById('adform-err').hidden      = true;
-    document.getElementById('adform-dup-warn').hidden = true;
-    pendingSave = false;
+    editingAd = null;
+    retainedSizes = {};
+    document.getElementById('adform-heading').textContent = 'Add Creative';
+    document.getElementById('adform-submit').textContent = 'Save Ad';
     SIZES.forEach(function (s) {
       var k = s.replace('x', '-');
       var t = document.getElementById('af-thumb-' + k);
       if (t) { t.hidden = true; t.querySelector('img').src = ''; }
       var slot = document.getElementById('af-slot-' + k);
-      if (slot) slot.classList.remove('af-slot--ok', 'af-slot--warn', 'af-slot--error');
-      var warn = document.getElementById('af-slot-warn-' + k);
-      if (warn) warn.hidden = true;
+      if (slot) slot.classList.remove('af-slot--ok');
     });
     imgData = {};
     imgFiles = {};
@@ -642,12 +617,12 @@
     }, function (val) {
       var isNew = val === '__new__';
       document.getElementById('af-new-brand').hidden   = !isNew;
-      document.getElementById('af-cat-section').hidden = !isNew;
-      if (val && !isNew) {
+      document.getElementById('af-cat-section').hidden = !isNew && !editingAd;
+      if (val && !isNew && !editingAd) {
         autoFill(bm.get(val) || []);
       } else if (!val) {
         clearChecks();
-      } else {
+      } else if (isNew) {
         if (_cddCtrl) _cddCtrl.reset();
         document.getElementById('af-new-cat').hidden = true;
       }
@@ -676,7 +651,6 @@
     });
 
     // Duplicate warning dismiss
-    document.getElementById('adform-dup-cancel').addEventListener('click', hideDuplicateWarning);
 
     // Form submit
     document.getElementById('adform').addEventListener('submit', function (e) {
@@ -736,6 +710,8 @@
       init();
       loadAppScript(function () {
         addDeleteButtons();
+        var grid = document.getElementById('grid');
+        if (grid) new MutationObserver(addDeleteButtons).observe(grid, { childList: true });
         hidePageLoader();
       });
     });

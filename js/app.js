@@ -83,8 +83,6 @@
     return state.section === 'mockups' ? isMockup(ad) : !isMockup(ad);
   }
 
-  // Ads/Mockups section switcher: uncomment this and the render update when released.
-  /*
   const sectionControls = document.createElement('nav');
   sectionControls.className = 'showcase-sections';
   sectionControls.setAttribute('aria-label', 'Creative sections');
@@ -103,7 +101,6 @@
   }
 
   document.querySelector('.results__bar').prepend(sectionControls);
-  */
 
 
   // --- Build facet value lists with counts ---
@@ -204,15 +201,12 @@
       : 'No ads match your filters.';
     el.empty.hidden = visible.length !== 0;
 
-    // Ads/Mockups section switcher: restore alongside the creation block above.
-    /*
     sectionControls.querySelectorAll('button').forEach((button) => {
       button.setAttribute(
         'aria-pressed',
         String(button.dataset.section === state.section)
       );
     });
-    */
 
     // Detach cards that are no longer visible, keep the rest in the cache.
     const visibleIds = new Set(visible.map((a) => a.id));

@@ -2,6 +2,9 @@
   "name": "creative-showcase-add-ad-api",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules --test index.test.mjs"
+  },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.600.0",
     "@aws-sdk/lib-dynamodb": "^3.600.0",

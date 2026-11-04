@@ -1,9 +1,9 @@
 // Creative Showcase "Add Ad" API.
-// Handles: GET /ads, POST /ads/presign, POST /ads, DELETE /ads/{id}
+// Handles: GET /ads, POST /ads/presign, POST /ads, PUT /ads/{id}, DELETE /ads/{id}
 // Expects API Gateway HTTP API with Lambda proxy integration, payload format 2.0.
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, ScanCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, ScanCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -15,12 +15,11 @@ const BUCKET_NAME = process.env.BUCKET_NAME;
 // Accept either name — the AWS team's convention is SITE_ORIGIN; the README uses
 // ALLOWED_ORIGIN. Reading both avoids a mismatch breaking CORS.
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || process.env.SITE_ORIGIN || '*';
-const ADMIN_TOKENS = (process.env.ADMIN_TOKENS || '').split(',').map((t) => t.trim()).filter(Boolean);
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
 };
 
 function json(statusCode, body) {
@@ -31,7 +30,6 @@ function json(statusCode, body) {
   };
 }
 
-const REQUIRED_FIELDS = ['id', 'title', 'brand', 'category', 'campaignTypes', 'features', 'sizes'];
 const CONTENT_TYPE_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
 
 async function listAds() {
@@ -40,29 +38,46 @@ async function listAds() {
 }
 
 async function createAd(body) {
-  for (const f of REQUIRED_FIELDS) {
-    const v = body[f];
-    if (v == null || (Array.isArray(v) && !v.length) || v === '') {
-      return json(400, { error: `Missing required field: ${f}` });
-    }
-  }
   const item = {
     id: body.id,
-    title: body.title,
-    brand: body.brand,
-    category: body.category,
-    campaignTypes: body.campaignTypes,
-    features: body.features,
+    title: body.title ?? '',
+    brand: body.brand ?? '',
+    category: body.category ?? '',
+    campaignTypes: body.campaignTypes ?? [],
+    features: body.features ?? [],
     date: body.date || new Date().toISOString().slice(0, 10),
-    sizes: body.sizes,
+    sizes: body.sizes ?? {},
     createdAt: new Date().toISOString(),
   };
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
   return json(201, item);
 }
 
+async function updateAd(id, body) {
+  const defaults = { title: '', brand: '', category: '', campaignTypes: [], features: [], sizes: {} };
+  const names = {};
+  const values = {};
+  const assignments = Object.keys(defaults).map((field) => {
+    names[`#${field}`] = field;
+    values[`:${field}`] = body[field] ?? defaults[field];
+    return `#${field} = :${field}`;
+  });
+  names['#updatedAt'] = 'updatedAt';
+  values[':updatedAt'] = new Date().toISOString();
+  assignments.push('#updatedAt = :updatedAt');
+
+  const out = await ddb.send(new UpdateCommand({
+    TableName: TABLE_NAME,
+    Key: { id },
+    UpdateExpression: `SET ${assignments.join(', ')}`,
+    ExpressionAttributeNames: names,
+    ExpressionAttributeValues: values,
+    ReturnValues: 'ALL_NEW',
+  }));
+  return json(200, out.Attributes);
+}
+
 async function deleteAd(id) {
-  if (!id) return json(400, { error: 'Missing ad id' });
   await ddb.send(new DeleteCommand({ TableName: TABLE_NAME, Key: { id } }));
 
   // Best-effort cleanup of the ad's images; a failure here shouldn't fail the delete.
@@ -78,10 +93,7 @@ async function deleteAd(id) {
 }
 
 async function presign(body) {
-  const { adId, files } = body;
-  if (!adId || !Array.isArray(files) || !files.length) {
-    return json(400, { error: 'Missing adId or files' });
-  }
+  const { adId, files = [] } = body;
 
   const uploads = await Promise.all(files.map(async ({ size, contentType }) => {
     const ext = CONTENT_TYPE_EXT[contentType] || 'bin';
@@ -101,24 +113,6 @@ async function presign(body) {
 // Works across API Gateway HTTP API (v2) / Lambda Function URLs, which put the
 // method at event.requestContext.http.method, and REST API (v1) proxy
 // integration, which uses event.httpMethod.
-function requireAuth(event) {
-  const authHeader = event.headers?.authorization || event.headers?.Authorization;
-  if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
-    return json(401, { error: 'Unauthorized' });
-  }
-
-  if (!ADMIN_TOKENS.length) {
-    return json(500, { error: 'Admin auth is not configured on this environment' });
-  }
-
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!ADMIN_TOKENS.includes(token)) {
-    return json(403, { error: 'Forbidden' });
-  }
-
-  return null;
-}
-
 function getMethod(event) {
   return event.requestContext?.http?.method || event.httpMethod || '';
 }
@@ -147,22 +141,13 @@ export const handler = async (event) => {
   try {
     if (method === 'OPTIONS') return { statusCode: 204, headers: CORS_HEADERS, body: '' };
     if (method === 'GET' && route === '/ads') return await listAds();
-
-    if (method === 'POST' && route === '/ads/presign') {
-      const authError = requireAuth(event);
-      if (authError) return authError;
-      return await presign(parseBody(event));
+    if (method === 'POST' && route === '/ads/presign') return await presign(parseBody(event));
+    if (method === 'POST' && route === '/ads') return await createAd(parseBody(event));
+    if (method === 'PUT' && route.startsWith('/ads/')) {
+      const id = event.pathParameters?.id || route.slice('/ads/'.length);
+      return await updateAd(decodeURIComponent(id), parseBody(event));
     }
-
-    if (method === 'POST' && route === '/ads') {
-      const authError = requireAuth(event);
-      if (authError) return authError;
-      return await createAd(parseBody(event));
-    }
-
     if (method === 'DELETE' && route.startsWith('/ads/')) {
-      const authError = requireAuth(event);
-      if (authError) return authError;
       // Prefer the REST API path parameter when present; fall back to the route.
       const id = event.pathParameters?.id || route.slice('/ads/'.length);
       return await deleteAd(decodeURIComponent(id));
